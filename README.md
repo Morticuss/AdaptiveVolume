@@ -9,7 +9,7 @@ then smoothly restores the music when the conversation pauses.
 
 ## Install
 
-You need **Windows 11 on an Intel or AMD PC**, plus the **Spotify and Discord
+You need **Windows 11**, plus the **Spotify and Discord
 desktop apps**. Python and extra audio drivers are not needed for the standard setup.
 
 1. Download the **Windows x64 ZIP** from the release page.
