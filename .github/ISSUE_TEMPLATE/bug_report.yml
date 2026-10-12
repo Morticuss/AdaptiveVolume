@@ -1,0 +1,29 @@
+name: Bug report
+description: Report a problem with audio, detection or the interface.
+body:
+  - type: input
+    id: version
+    attributes:
+      label: App and Windows version
+      placeholder: Adaptive Volume 1.0.0, Windows 11
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Playback mode
+      options:
+        - Unbuffered
+        - Buffered with VB-CABLE
+  - type: textarea
+    id: problem
+    attributes:
+      label: What happened?
+      description: Include the steps to reproduce and what you expected.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics
+      description: Paste relevant text from the app's Diagnostics tab. Remove private information.
