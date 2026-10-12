@@ -1,0 +1,34 @@
+# Testing and limitations
+
+## What has been checked
+
+Version 1.0.0 passed 19 automated tests and the GitHub Windows build workflow.
+The checks cover fade timing, new speech during restoration, noise thresholds,
+saved settings, audio buffering, device retry logic and Spotify volume recovery.
+
+Additional local checks verified the Windows interface and tray menu, capture
+from a separate audio process, and VB-CABLE forwarding across two app restarts.
+Live Spotify checks confirmed volume restoration and that unrelated apps kept
+their original levels. The packaged app passed launch, exit and generated-audio tests.
+
+Audio tests used a separate test app or computer-generated speech. They did not
+use a Discord call. Windows sign-in and physical headphone disconnection and
+reconnection have not been tested; their recovery logic has automated coverage.
+
+## What to expect
+
+- Loud noise or Discord notifications can resemble speech. A higher minimum voice level rejects more quiet sounds, but can also miss quiet speakers.
+- Unbuffered mode responds after speech is detected. It cannot lower music before a person starts talking.
+- The Buffered mode's 50 ms setting controls the app's audio queue. Actual delay also includes capture and playback, so a fade before the first syllable is not guaranteed.
+- The Diagnostics comparison measures generated audio through the app's queue and Windows playback path. It excludes VB-CABLE input, a Discord call and the physical headphones.
+
+Windows 11 x64 is the tested platform. Process-specific capture uses a Windows
+API requiring build 20348 or later, as documented in
+[Microsoft's loopback sample](https://learn.microsoft.com/en-us/samples/microsoft/windows-classic-samples/applicationloopbackaudio-sample/).
+
+## Packaging detail
+
+On the development PC, Qt crashed during DLL cleanup after the packaged GUI had
+closed. The app therefore explicitly stops its workers, restores Spotify and
+destroys its windows before ending the packaged process. The launch/exit check
+confirms that this cleanup completed. See the comments in `app.py` for the implementation.

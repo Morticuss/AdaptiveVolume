@@ -24,7 +24,16 @@ def prepare_distribution(root, distribution):
         if not path.resolve().is_relative_to(distribution):
             raise ValueError('Runtime cleanup path leaves the distribution')
         path.unlink()
-    for name in ('README.md', 'VALIDATION.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
+    obsolete = [distribution / 'VALIDATION.md', distribution / 'docs' / 'RELEASE_1.0.0.md']
+    source_licenses = {p.relative_to(root / 'licenses') for p in (root / 'licenses').rglob('*') if p.is_file()}
+    obsolete += [p for p in (distribution / 'licenses').rglob('*') if p.is_file()
+                 and p.relative_to(distribution / 'licenses') not in source_licenses]
+    for path in obsolete:
+        if path.exists():
+            if not path.resolve().is_relative_to(distribution):
+                raise ValueError('Documentation cleanup path leaves the distribution')
+            path.unlink()
+    for name in ('README.md', 'LICENSE', 'THIRD_PARTY_NOTICES.md',
                  'CHANGELOG.md', 'VERSION'):
         shutil.copyfile(root / name, distribution / name)
     for name in ('docs', 'licenses'):

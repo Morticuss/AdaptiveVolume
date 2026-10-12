@@ -1,8 +1,8 @@
 # Third-party notices
 
-Adaptive Volume's application source is MIT licensed. The portable Windows
-package includes independently licensed libraries; their notices are included
-under `licenses/third-party`.
+The Adaptive Volume source uses the [MIT license](LICENSE). Its bundled libraries
+have their own licenses, included under `licenses/third-party`. These notices
+belong with the distributed app.
 
 | Component | Upstream source |
 | --- | --- |
@@ -18,17 +18,13 @@ under `licenses/third-party`.
 | CFFI and pycparser | https://github.com/python-cffi/cffi and https://github.com/eliben/pycparser |
 | PyInstaller bootloader | https://github.com/pyinstaller/pyinstaller |
 
-Qt, PySide6 and Shiboken are used under their open-source LGPLv3 option where
-applicable. They are dynamically linked and their DLLs remain separate in
-`_internal`, so compatible replacements can be supplied. No modifications were
-made to their source. GPL and LGPL license texts are included with their notices.
-Corresponding upstream sources for the distributed versions are linked above.
+The included Qt GUI libraries, PySide6 and Shiboken use the LGPLv3 option of their
+open-source licenses. Their DLLs are separate files in `_internal`, allowing
+compatible library replacements. Their source was not modified; the source
+archives and repositories are linked above, and the license texts are included.
 
-The release omits unused Qt PDF, Virtual Keyboard and QML/Quick libraries and
-plugins. It retains the Windows platform plugin and the GUI libraries needed by
-the app. Microsoft runtime libraries included by the Python/Qt distributions
-remain subject to Microsoft's redistribution terms. Additional license notices
-for Python's bundled native libraries are included in its license text.
+Microsoft runtime libraries retain Microsoft's redistribution terms. Notices
+for native libraries shipped with Python are included in Python's license text.
 
 VB-CABLE is optional third-party software distributed separately by VB-Audio.
 Its installer is not included in this repository or release.
