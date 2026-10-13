@@ -53,7 +53,7 @@ def main():
     window = MainWindow(smoke='--smoke' in sys.argv)
     app.aboutToQuit.connect(window.controller.close)
     if '--tray' not in sys.argv or '--smoke' in sys.argv:
-        window.show()
+        window.show_window()
     if '--smoke' in sys.argv:
         QTimer.singleShot(2500, window.quit_app)
     completed = False

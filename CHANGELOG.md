@@ -12,6 +12,8 @@ Retain Spotify volume restoration and add helper crash diagnostics in
 
 Open settings from either a single or double tray click, defer restoration until
 the Windows tray callback returns, and log activation and window visibility.
+Restore the native window when a hidden launch leaves Windows visibility out
+of sync with Qt.
 
 ## 1.0.1
 

@@ -460,9 +460,19 @@ class MainWindow(QMainWindow):
     def show_window(self):
         self.tray.contextMenu().hide()
         self.showNormal()
+        from ctypes import wintypes
+        user = ctypes.windll.user32
+        user.IsWindowVisible.argtypes = [wintypes.HWND]
+        user.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        handle = int(self.winId())
+        # Windows can honor STARTUPINFO(SW_HIDE) on the first native show,
+        # although Qt has already marked the widget visible. A second Qt show
+        # then does nothing. Restore the actual HWND when those states differ.
+        if not user.IsWindowVisible(handle):
+            user.ShowWindow(handle, 9)  # SW_RESTORE
         self.raise_()
         self.activateWindow()
-        log.info('Settings window opened: visible=%s minimized=%s', self.isVisible(), self.isMinimized())
+        log.info('Settings window opened: visible=%s native_visible=%s minimized=%s', self.isVisible(), bool(user.IsWindowVisible(handle)), self.isMinimized())
 
     def tray_activated(self, reason):
         log.info('Tray activation: %s', reason)

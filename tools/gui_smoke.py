@@ -56,6 +56,15 @@ def main():
         window.show_window()
         app.processEvents()
         assert window.isVisible() and not window.isMinimized()
+        from ctypes import wintypes
+        user = ctypes.windll.user32
+        user.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user.IsWindowVisible.argtypes = [wintypes.HWND]
+        user.ShowWindow(int(window.winId()), 0)
+        assert window.isVisible() and not user.IsWindowVisible(int(window.winId()))
+        window.show_window()
+        app.processEvents()
+        assert user.IsWindowVisible(int(window.winId()))
         print('GUI/native HWND, tray popup/native HWND and shared slider synchronization passed')
         window.quit_app()
 
