@@ -3,7 +3,7 @@ import time
 import queue
 import logging
 from .envelope import Envelope
-from .volume import SpotifyVolume, all_sessions
+from .core_audio_worker import CoreAudioWorker
 from .audio import AudioEngine
 
 log = logging.getLogger(__name__)
@@ -29,6 +29,7 @@ class Controller:
         self.silent_bridge_since = None
         self.last_health_log = 0.
         self.last_signal_recovery = float('-inf')
+        self.volume_worker = None
         self.thread = threading.Thread(target=self._volume_loop, name='Spotify volume control', daemon=True)
         self.thread.start()
 
@@ -124,10 +125,8 @@ class Controller:
         return self.set_enabled(True) if was_enabled else True
 
     def _volume_loop(self):
-        import comtypes
-        comtypes.CoInitialize()
-        volume = SpotifyVolume()
-        refresh = 0
+        volume = CoreAudioWorker(self.settings)
+        self.volume_worker = volume
         preview_until = 0
         try:
             while not self.stop_event.wait(.002):
@@ -155,63 +154,25 @@ class Controller:
                     self.envelope.sustain('Volume preview', False)
                     preview_until = 0
                 self.envelope.enabled = self.enabled or now < preview_until
-                if now >= refresh:
-                    try:
-                        volume.refresh()
-                        self.spotify_count = len(volume.sessions)
-                        self._check_routing()
-                    except Exception as exc:
-                        self.error = f'Audio session discovery will retry: {exc}'
-                    refresh = now + 1
                 if self.audio.fault and 'stopped' in self.audio.fault.lower():
                     self.envelope.clear()
                 self.gain = self.envelope.value(now)
                 self.reasons = self.envelope.reasons(now)
-                volume.apply(self.gain)
-                if volume.error:
-                    self.error = volume.error
+                snapshot = volume.update(self.gain)
+                self.spotify_count = snapshot.get('spotify_count', self.spotify_count)
+                self.routing_status = snapshot.get('routing_status', self.routing_status)
+                self.cable_signal_time = snapshot.get('cable_signal_time', self.cable_signal_time)
+                if snapshot.get('error'):
+                    self.error = snapshot['error']
         except Exception as exc:
+            log.exception('Volume control failed')
             self.error = f'Volume control failed: {exc}'
         finally:
-            volume.restore()
-            comtypes.CoUninitialize()
-
-    def _check_routing(self):
-        from pycaw.utils import AudioUtilities
-        names = {d.id: d.FriendlyName for d in AudioUtilities.GetAllDevices()}
-        if self.settings.buffered:
-            try:
-                from .volume import cable_peak
-                if cable_peak() > .001:
-                    self.cable_signal_time = time.perf_counter()
-            except Exception:
-                # Some drivers do not expose a signal meter. Keep callback
-                # recovery working and record the missing diagnostic.
-                if not getattr(self, '_meter_warning', False):
-                    log.exception('Cable signal meter unavailable')
-                    self._meter_warning = True
-        found = []
-        for endpoint, session in all_sessions():
-            try:
-                if session.State == 1 and session.Process and session.Process.name().lower() == self.settings.discord_exe:
-                    found.append(names.get(endpoint, endpoint))
-            except Exception:
-                continue
-        previous = self.routing_status
-        if not found:
-            self.routing_status = 'No Discord audio session yet. Buffered output: CABLE Input. Unbuffered output: your headphones.'
-        elif self.settings.buffered:
-            self.routing_status = ('Discord cable routing detected' if all('cable input' in d.lower() for d in found)
-                else 'Discord is not fully routed to CABLE Input. Change its Output Device in Voice & Video.')
-        else:
-            self.routing_status = ('Switch Discord output back to your headphones for unbuffered playback.'
-                if any('cable' in d.lower() for d in found) else 'Direct Discord output detected')
-        if self.routing_status != previous:
-            log.info('Routing: %s', self.routing_status)
+            volume.close()
 
     def close(self):
         self.want_enabled = False
         self.enabled = False
         self.audio.stop()
         self.stop_event.set()
-        self.thread.join(5)
+        self.thread.join(8)

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.0.2
+
+Fix a native crash during Windows audio object cleanup that could terminate the
+app and silence buffered Discord playback. Run Windows audio control in a helper
+process with one Python thread, keeping COM object creation and cleanup together.
+The helper restarts automatically if it fails; the voice bridge keeps running.
+
+Retain Spotify volume restoration and add helper crash diagnostics in
+`data/audio-worker-crash.log`.
+
+Open settings from either a single or double tray click, defer restoration until
+the Windows tray callback returns, and log activation and window visibility.
+
 ## 1.0.1
 
 Detect and automatically restart a buffered bridge that keeps running silently

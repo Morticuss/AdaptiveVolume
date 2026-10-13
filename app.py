@@ -1,6 +1,10 @@
 import ctypes
 import os
 import sys
+if __name__ == '__main__':
+    # Dispatch frozen multiprocessing workers before Qt or audio imports.
+    import multiprocessing
+    multiprocessing.freeze_support()
 import traceback
 from pathlib import Path
 import faulthandler

@@ -14,6 +14,15 @@ automatic reopening restored capture and playback samples. Native GUI and tray
 checks passed. This reproduces the recovery failure in a controlled test; it does
 not establish the exact cause of the reported cold-boot Discord silence.
 
+Version 1.0.2 moves Windows audio COM objects into a helper process with one
+Python thread after crash logs showed COM pointer cleanup on GUI and PortAudio
+callback threads. A real VB-CABLE test forced 167 collections in the main process
+and terminated the helper while audio played. The helper restarted, the same
+capture/playback streams stayed active, and rendered audio continued. The largest
+observed callback age was approximately 6 ms. This checks helper crash containment
+and thread ownership; it does not guarantee uninterrupted playback through all
+possible driver, bridge-process or Windows failures.
+
 Additional local checks verified the Windows interface and tray menu, capture
 from a separate audio process, and VB-CABLE forwarding across two app restarts.
 Live Spotify checks confirmed volume restoration and that unrelated apps kept

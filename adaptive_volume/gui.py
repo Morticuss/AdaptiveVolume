@@ -1,6 +1,7 @@
 import ctypes
 import json
 import time
+import logging
 import subprocess
 import sys
 from pathlib import Path
@@ -14,6 +15,8 @@ from .config import Settings, data_dir
 from .controller import Controller
 from .audio import devices
 from . import startup
+
+log = logging.getLogger(__name__)
 
 STYLE = '''
 QWidget { background: #10151e; color: #e7edf5; font-family: 'Segoe UI'; font-size: 14px; }
@@ -322,7 +325,7 @@ class MainWindow(QMainWindow):
         menu.addSeparator()
         menu.addAction('Quit', self.quit_app)
         self.tray.setContextMenu(menu)
-        self.tray.activated.connect(lambda reason: self.show_window() if reason == QSystemTrayIcon.ActivationReason.DoubleClick else None)
+        self.tray.activated.connect(self.tray_activated)
         self.tray.show()
         self.set_quiet(self.settings.quiet_percent, save=False)
 
@@ -455,9 +458,19 @@ class MainWindow(QMainWindow):
         self.update_status()
 
     def show_window(self):
+        self.tray.contextMenu().hide()
         self.showNormal()
         self.raise_()
         self.activateWindow()
+        log.info('Settings window opened: visible=%s minimized=%s', self.isVisible(), self.isMinimized())
+
+    def tray_activated(self, reason):
+        log.info('Tray activation: %s', reason)
+        if reason in (QSystemTrayIcon.ActivationReason.Trigger,
+                      QSystemTrayIcon.ActivationReason.DoubleClick):
+            # Restore after the native tray callback returns, so the shell
+            # does not keep focus on a popup or notification-area window.
+            QTimer.singleShot(0, self.show_window)
 
     def quit_app(self):
         if self.controller.audio.output and not self.smoke:

@@ -37,7 +37,7 @@ Spotify keeps playing throughout. Discord, your microphone and other apps keep
 their own volume settings.
 
 Closing the window leaves the app running. Right-click its icon beside the
-Windows clock for the volume slider and quick controls, or double-click to reopen
+Windows clock for the volume slider and quick controls, or click to reopen
 settings. Use **Quit** from that menu to stop the app completely.
 
 ## Adjust voice detection
@@ -83,6 +83,8 @@ or playback keeps returning silence. Allow several seconds for recovery. Startup
 routing and bridge health diagnostics are saved in `data/runtime.log` beside the
 app, with two rotating backups. These logs contain device names and measurements,
 and do not record conversations.
+Native crash details are saved in `data/native-crash.log` and
+`data/audio-worker-crash.log` when available.
 
 ## Privacy and removal
 

@@ -130,7 +130,7 @@ def test_repeated_silent_recoveries_are_spaced_apart(monkeypatch):
 
 
 def test_routing_ignores_old_inactive_discord_sessions(monkeypatch):
-    from adaptive_volume import controller as module, volume
+    from adaptive_volume import core_audio_worker as module, volume
     from pycaw.utils import AudioUtilities
     controller, _ = fake_controller()
     controller.settings = SimpleNamespace(buffered=True, discord_exe='discord.exe')
@@ -139,9 +139,8 @@ def test_routing_ignores_old_inactive_discord_sessions(monkeypatch):
         SimpleNamespace(id='cable', FriendlyName='CABLE Input'),
         SimpleNamespace(id='headphones', FriendlyName='Headphones')])
     process = SimpleNamespace(name=lambda: 'Discord.exe')
-    monkeypatch.setattr(module, 'all_sessions', lambda: [
+    monkeypatch.setattr(volume, 'all_sessions', lambda: [
         ('headphones', SimpleNamespace(State=0, Process=process)),
         ('cable', SimpleNamespace(State=1, Process=process))])
     monkeypatch.setattr(volume, 'cable_peak', lambda: 0.)
-    controller._check_routing()
-    assert controller.routing_status == 'Discord cable routing detected'
+    assert module.routing_status('discord.exe', True) == 'Discord cable routing detected'
