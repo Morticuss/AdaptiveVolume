@@ -6,7 +6,6 @@ from .config import data_dir
 
 def cable_peak():
     """Read the render endpoint meter in the caller's COM apartment."""
-    import ctypes
     from comtypes import CLSCTX_ALL
     from pycaw.utils import AudioUtilities
     from pycaw.api.endpointvolume import IAudioMeterInformation
@@ -18,7 +17,11 @@ def cable_peak():
             if device.EndpointVolume.GetMute() or device.EndpointVolume.GetMasterVolumeLevelScalar() == 0:
                 continue
             interface = device._dev.Activate(IAudioMeterInformation._iid_, CLSCTX_ALL, None)
-            peaks.append(float(ctypes.cast(interface, ctypes.POINTER(IAudioMeterInformation)).GetPeakValue()))
+            # QueryInterface acquires an owned reference. ctypes.cast creates
+            # a second comtypes wrapper without AddRef, whose destructor would
+            # release the same reference twice when its cycle is collected.
+            meter = interface.QueryInterface(IAudioMeterInformation)
+            peaks.append(float(meter.GetPeakValue()))
     return max(peaks, default=0.)
 
 

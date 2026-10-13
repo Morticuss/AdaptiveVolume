@@ -1,5 +1,6 @@
 import pytest
 from adaptive_volume.volume import SpotifyVolume, SessionState
+from types import SimpleNamespace
 
 
 class FakeVolume:
@@ -13,6 +14,24 @@ class FakeVolume:
     def SetMasterVolume(self, value, context):
         self.current = value
         self.writes.append(value)
+
+
+def test_cable_meter_acquires_owned_interface_instead_of_aliasing(monkeypatch):
+    from adaptive_volume.volume import cable_peak
+    from pycaw.utils import AudioUtilities
+    from pycaw.api.endpointvolume import IAudioMeterInformation
+    acquired = []
+    class Pointer:
+        def QueryInterface(self, interface):
+            acquired.append(interface)
+            return SimpleNamespace(GetPeakValue=lambda: .25)
+    device = SimpleNamespace(FriendlyName='CABLE Input (VB-Audio Virtual Cable)',
+        EndpointVolume=SimpleNamespace(GetMute=lambda: False,
+                                       GetMasterVolumeLevelScalar=lambda: 1.),
+        _dev=SimpleNamespace(Activate=lambda *args: Pointer()))
+    monkeypatch.setattr(AudioUtilities, 'GetAllDevices', lambda **kwargs: [device])
+    assert cable_peak() == .25
+    assert acquired == [IAudioMeterInformation]
 
 
 def test_manual_change_is_respected_and_never_boosted():

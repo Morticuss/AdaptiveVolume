@@ -3,7 +3,9 @@
 ## 1.0.2
 
 Fix a native crash during Windows audio object cleanup that could terminate the
-app and silence buffered Discord playback. Run Windows audio control in a helper
+app and silence buffered Discord playback. Acquire a separate owned reference
+for the cable meter instead of casting a pointer that would be released twice.
+Run Windows audio control in a helper
 process with one Python thread, keeping COM object creation and cleanup together.
 The helper restarts automatically if it fails; the voice bridge keeps running.
 
