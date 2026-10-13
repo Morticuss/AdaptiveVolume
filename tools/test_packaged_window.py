@@ -47,6 +47,7 @@ def main():
     assert marker['event_loop_completed'] and marker['native_windows_destroyed']
     report = {'hidden_windows_launch': True, 'native_settings_window_visible': True,
               'clean_shutdown': True}
+    (root / 'data').mkdir(parents=True, exist_ok=True)
     (root / 'data/packaged-window-test.json').write_text(json.dumps(report, indent=2))
     print(json.dumps(report, indent=2))
 
