@@ -23,6 +23,10 @@ observed callback age was approximately 6 ms. This checks helper crash containme
 and thread ownership; it does not guarantee uninterrupted playback through all
 possible driver, bridge-process or Windows failures.
 
+The tray restoration regression checks single/double-click signals, minimization
+and native hiding while Qt still reports the widget visible. A packaged hidden
+Windows launch also verifies the actual HWND is visible and shutdown completes.
+
 Additional local checks verified the Windows interface and tray menu, capture
 from a separate audio process, and VB-CABLE forwarding across two app restarts.
 Live Spotify checks confirmed volume restoration and that unrelated apps kept
