@@ -4,6 +4,24 @@ from dataclasses import dataclass
 from .config import data_dir
 
 
+def cable_peak():
+    """Read the render endpoint meter in the caller's COM apartment."""
+    import ctypes
+    from comtypes import CLSCTX_ALL
+    from pycaw.utils import AudioUtilities
+    from pycaw.api.endpointvolume import IAudioMeterInformation
+    from pycaw.constants import EDataFlow, DEVICE_STATE
+    peaks = []
+    for device in AudioUtilities.GetAllDevices(data_flow=EDataFlow.eRender.value,
+                                              device_state=DEVICE_STATE.ACTIVE.value):
+        if 'cable input' in device.FriendlyName.lower():
+            if device.EndpointVolume.GetMute() or device.EndpointVolume.GetMasterVolumeLevelScalar() == 0:
+                continue
+            interface = device._dev.Activate(IAudioMeterInformation._iid_, CLSCTX_ALL, None)
+            peaks.append(float(ctypes.cast(interface, ctypes.POINTER(IAudioMeterInformation)).GetPeakValue()))
+    return max(peaks, default=0.)
+
+
 def all_sessions():
     from pycaw.utils import AudioUtilities, AudioSession
     from pycaw.api.audiopolicy import IAudioSessionControl2

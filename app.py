@@ -19,6 +19,10 @@ from adaptive_volume.gui import MainWindow, STYLE
 
 
 def main():
+    from adaptive_volume.runtime_log import configure
+    import logging
+    configure()
+    logging.getLogger('adaptive_volume').info('Application starting; packaged=%s', getattr(sys, 'frozen', False))
     if '--audio-test' in sys.argv:
         import json
         from adaptive_volume.diagnostics import run_comparison

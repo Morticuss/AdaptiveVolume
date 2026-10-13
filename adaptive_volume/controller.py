@@ -1,9 +1,12 @@
 import threading
 import time
 import queue
+import logging
 from .envelope import Envelope
 from .volume import SpotifyVolume, all_sessions
 from .audio import AudioEngine
+
+log = logging.getLogger(__name__)
 
 
 class Controller:
@@ -22,6 +25,10 @@ class Controller:
         self.error = ''
         self.routing_status = 'Discord output must be CABLE Input in buffered mode; headphones in unbuffered mode.'
         self.audio = AudioEngine(settings, self._speech)
+        self.cable_signal_time = 0.
+        self.silent_bridge_since = None
+        self.last_health_log = 0.
+        self.last_signal_recovery = float('-inf')
         self.thread = threading.Thread(target=self._volume_loop, name='Spotify volume control', daemon=True)
         self.thread.start()
 
@@ -53,7 +60,26 @@ class Controller:
             now = time.perf_counter()
             failed = failed or (audio.last_render > 0 and now - audio.last_render > 2) or (
                 audio.last_capture > 0 and now - audio.last_capture > 2)
+            # Active WASAPI callbacks can continue with zeros after device
+            # initialization at login. Compare actual cable signal with both
+            # ends of our bridge, independently of the speech threshold.
+            missing_signal = self._silent_bridge(now)
+            if missing_signal and now - self.last_signal_recovery >= 15:
+                failed = True
+                self.last_signal_recovery = now
+                log.warning('Recovering silent bridge: cable_signal_age=%.2f capture_signal_age=%.2f render_signal_age=%.2f',
+                            now - self.cable_signal_time, now - audio.last_capture_signal,
+                            now - audio.last_render_signal)
+            if now - self.last_health_log >= 30:
+                self.last_health_log = now
+                log.info('Bridge health: input_active=%s output_active=%s capture_age=%.2f render_age=%.2f cable_signal_age=%.2f metrics=%s fault=%s',
+                         audio.input.active if audio.input else False,
+                         audio.output.active if audio.output else False,
+                         now - audio.last_capture, now - audio.last_render,
+                         now - self.cable_signal_time, audio.metrics(), audio.fault)
         if failed:
+            log.warning('Restarting audio bridge automatically')
+            self.silent_bridge_since = None
             self.set_enabled(False)
             audio.stop()
             self.want_enabled = True
@@ -66,7 +92,22 @@ class Controller:
                 sd._initialize()
                 self.set_enabled(True)
             except Exception as exc:
+                log.exception('Audio device retry failed')
                 self.error = f'Waiting for audio devices; retrying automatically: {exc}'
+
+    def _silent_bridge(self, now):
+        audio = self.audio
+        # Give stream startup and the configured FIFO time to settle. A quiet
+        # Discord channel alone must never trigger a restart.
+        expected = self.cable_signal_time > 0 and now - self.cable_signal_time < 2
+        missing = (now - audio.last_capture_signal > 2 or
+                   now - audio.last_render_signal > 2)
+        if now - audio.started_at < 3 or not expected or not missing:
+            self.silent_bridge_since = None
+            return False
+        if self.silent_bridge_since is None:
+            self.silent_bridge_since = now
+        return now - self.silent_bridge_since >= 3
 
 
     def quiet(self, percent):
@@ -138,13 +179,25 @@ class Controller:
     def _check_routing(self):
         from pycaw.utils import AudioUtilities
         names = {d.id: d.FriendlyName for d in AudioUtilities.GetAllDevices()}
+        if self.settings.buffered:
+            try:
+                from .volume import cable_peak
+                if cable_peak() > .001:
+                    self.cable_signal_time = time.perf_counter()
+            except Exception:
+                # Some drivers do not expose a signal meter. Keep callback
+                # recovery working and record the missing diagnostic.
+                if not getattr(self, '_meter_warning', False):
+                    log.exception('Cable signal meter unavailable')
+                    self._meter_warning = True
         found = []
         for endpoint, session in all_sessions():
             try:
-                if session.Process and session.Process.name().lower() == self.settings.discord_exe:
+                if session.State == 1 and session.Process and session.Process.name().lower() == self.settings.discord_exe:
                     found.append(names.get(endpoint, endpoint))
             except Exception:
                 continue
+        previous = self.routing_status
         if not found:
             self.routing_status = 'No Discord audio session yet. Buffered output: CABLE Input. Unbuffered output: your headphones.'
         elif self.settings.buffered:
@@ -153,6 +206,8 @@ class Controller:
         else:
             self.routing_status = ('Switch Discord output back to your headphones for unbuffered playback.'
                 if any('cable' in d.lower() for d in found) else 'Direct Discord output detected')
+        if self.routing_status != previous:
+            log.info('Routing: %s', self.routing_status)
 
     def close(self):
         self.want_enabled = False

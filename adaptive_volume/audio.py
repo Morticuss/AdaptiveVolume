@@ -1,12 +1,15 @@
 import queue
 import threading
 import time
+import logging
 import numpy as np
 import psutil
 import sounddevice as sd
 from .buffer import AudioBuffer
 from .speech import SpeechDetector
 from .process_audio import ProcessCapture
+
+log = logging.getLogger(__name__)
 
 
 def devices():
@@ -42,11 +45,15 @@ class AudioEngine:
         self.rms = 0.
         self.last_level_time = 0.
         self.dropped_analysis = 0
+        self.last_capture_signal = self.last_render_signal = 0.
+        self.started_at = 0.
 
     def start(self):
         self.stop_event.clear()
         self.fault = ''
         self.last_capture = self.last_render = time.perf_counter()
+        self.started_at = self.last_capture
+        self.last_capture_signal = self.last_render_signal = 0.
         if self.settings.buffered:
             available = devices()
             inputs = [d for d in available if d['max_input_channels'] >= 2 and
@@ -59,6 +66,7 @@ class AudioEngine:
             target = next((d for d in outputs if d['name'] == self.settings.output_name), None)
             if not source or not target:
                 self.status = 'Choose CABLE Output and your headphones in Audio settings'
+                log.warning('Bridge devices unavailable: cable=%r output=%r', self.settings.cable_name, self.settings.output_name)
                 return False
             try:
                 self.buffer = AudioBuffer(delay_ms=self.settings.buffer_ms)
@@ -72,7 +80,9 @@ class AudioEngine:
                 self.input.start()
                 self.output.start()
                 self.status = 'Buffered audio bridge running · check Discord output is CABLE Input'
+                log.info('Bridge started: cable=%r output=%r capture_ms=%.1f render_ms=%.1f', source['name'], target['name'], self.capture_latency * 1000, self.render_latency * 1000)
             except Exception as exc:
+                log.exception('Bridge startup failed')
                 self.fault = str(exc)
                 self.stop()
                 self.status = 'Audio bridge failed · use Recovery'
@@ -86,6 +96,8 @@ class AudioEngine:
     def _capture(self, data, frames, timing, flags):
         now = time.perf_counter()
         self.last_capture = now
+        if np.max(np.abs(data), initial=0.) > .000001:
+            self.last_capture_signal = now
         if flags:
             self.fault = f'Input stream: {flags}'
         self.buffer.push(data)
@@ -99,6 +111,8 @@ class AudioEngine:
         if flags:
             self.fault = f'Output stream: {flags}'
         out[:] = self.buffer.pop(frames)
+        if np.max(np.abs(out), initial=0.) > .000001:
+            self.last_render_signal = self.last_render
 
     def _enqueue(self, source, data, audible_end):
         try:
@@ -150,6 +164,7 @@ class AudioEngine:
         self.status = 'Unbuffered · Discord captured' if pid else 'Unbuffered · waiting for Discord desktop'
 
     def stop(self):
+        log.info('Stopping audio: status=%s fault=%s', self.status, self.fault)
         self.stop_event.set()
         for stream in (self.input, self.output):
             if stream:

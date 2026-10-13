@@ -6,6 +6,14 @@ Version 1.0.0 passed 19 automated tests and the GitHub Windows build workflow.
 The checks cover fade timing, new speech during restoration, noise thresholds,
 saved settings, audio buffering, device retry logic and Spotify volume recovery.
 
+Version 1.0.1 passed 24 automated tests, including regressions for active but silent bridge
+streams, normal source silence and quiet audio below the voice threshold. A local
+test used the real VB-CABLE signal meter and generated audio, deliberately replaced
+capture data with silence while both streams remained active, and verified that
+automatic reopening restored capture and playback samples. Native GUI and tray
+checks passed. This reproduces the recovery failure in a controlled test; it does
+not establish the exact cause of the reported cold-boot Discord silence.
+
 Additional local checks verified the Windows interface and tray menu, capture
 from a separate audio process, and VB-CABLE forwarding across two app restarts.
 Live Spotify checks confirmed volume restoration and that unrelated apps kept

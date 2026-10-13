@@ -36,6 +36,7 @@ Run these manually when the relevant devices and apps are available:
 - `tools/test_process_capture.py` starts a separate audio source and checks process capture.
 - `tools/test_spotify.py` briefly changes and restores live Spotify mixer volume.
 - `tools/test_restart_bridge.py` plays a quiet tone through VB-CABLE across two app launches. It requires Buffered mode configured in `dist/AdaptiveVolume`; quit any existing copy first.
+- `tools/test_bridge_recovery.py` starts cable audio after the bridge, injects silent capture callbacks into otherwise active streams, and checks automatic recovery with the real Windows cable signal meter. It requires the same saved Buffered settings and no running copy of the app.
 
 These tools use test audio rather than Discord calls. For a timing comparison,
 use the app's Diagnostics tab. Results and remaining gaps are documented in

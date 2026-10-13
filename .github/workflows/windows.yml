@@ -40,6 +40,6 @@ jobs:
         with:
           name: AdaptiveVolume-windows-x64
           path: |
-            dist/AdaptiveVolume-1.0.0-windows-x64.zip
+            dist/AdaptiveVolume-*-windows-x64.zip
             dist/SHA256SUMS.txt
           retention-days: 14

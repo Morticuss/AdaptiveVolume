@@ -78,6 +78,12 @@ See the [buffered setup guide](docs/BUFFERED_SETUP.md) for instructions and timi
 Loud background sounds and Discord notifications can still be mistaken for speech.
 See [testing and limitations](docs/TESTING.md) for what has been verified.
 
+Buffered mode automatically reopens the bridge if the cable has audio but capture
+or playback keeps returning silence. Allow several seconds for recovery. Startup,
+routing and bridge health diagnostics are saved in `data/runtime.log` beside the
+app, with two rotating backups. These logs contain device names and measurements,
+and do not record conversations.
+
 ## Privacy and removal
 
 Audio is analysed on your PC. Conversations are not recorded or uploaded, and
